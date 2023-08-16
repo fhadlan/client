@@ -11,17 +11,14 @@ import {
   useMediaQuery,
   Typography,
   useTheme,
-  MenuItem,
 } from "@mui/material";
-import EditOutLinedIcon from "@mui/icons-material/EditOutlined";
 import { Formik } from "formik"; //module untuk buat form
 import * as yup from "yup"; //module validasi
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setLogin } from "state";
-import Dropzone from "react-dropzone"; //module untuk upload foto/file
-import FlexBetween from "components/FlexBetween";
 
+/**SCHEMA AND VALIDATION */
 const registerSchema = yup.object().shape({
   firstName: yup.string().required("Field harus diisi"),
   lastName: yup.string().required("Field harus diisi"),
@@ -29,8 +26,20 @@ const registerSchema = yup.object().shape({
   email: yup
     .string()
     .email("Masukkan email yang benar")
-    .required("Field harus diisi"),
-  password: yup.string().required("Field harus diisi"),
+    .required("Field harus diisi")
+    .test("Unique email", "Email sudah digunakan", async (value) => {
+      const cek = await fetch("http://localhost:3001/api/v1/auth/cek", {
+        method: "post",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: value }),
+      });
+      const response = await cek.json();
+      return response.cek === null ? true : false;
+    }),
+  password: yup
+    .string()
+    .required("Field harus diisi")
+    .min(8, "Password harus 8 karakter atau lebih"),
 });
 
 const loginSchema = yup.object().shape({
@@ -41,6 +50,7 @@ const loginSchema = yup.object().shape({
   password: yup.string().required("Silahkan isi password"),
 });
 
+/**INITIAL VALUE FOR FORMIK */
 const initialValueRegister = {
   firstName: "",
   lastName: "",
@@ -54,6 +64,7 @@ const initialValueLogin = {
   password: "",
 };
 
+/**FORM FUNCTION */
 const Form = () => {
   const [pageType, setPageType] = useState("register");
   const { palette } = useTheme();
@@ -63,13 +74,52 @@ const Form = () => {
   const isLogin = pageType === "login";
   const isRegister = pageType === "register";
 
-  const handleFormSubmit = async (values, onSubmitProps) => {};
+  /**FORM FUNCTION */
+  const register = async (values, onSubmitProps) => {
+    const registerRes = await fetch(
+      "http://localhost:3001/api/v1/auth/register",
+      {
+        method: "post",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      }
+    );
+    const registered = await registerRes.json();
+    onSubmitProps.resetForm();
+    if (registered) {
+      setPageType("login");
+    }
+  };
+
+  const login = async (values, onSubmitProps) => {
+    const loggedInRes = await fetch("http://localhost:3001/api/v1/auth/login", {
+      method: "post",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+    const loggedIn = await loggedInRes.json();
+    onSubmitProps.resetForm();
+    if (loggedIn) {
+      dispatch(
+        setLogin({
+          user: loggedIn.user,
+          token: loggedIn.token,
+        })
+      );
+      navigate("/home");
+    }
+  };
+  const handleFormSubmit = async (values, onSubmitProps) => {
+    if (isLogin) await login(values, onSubmitProps);
+    if (isRegister) await register(values, onSubmitProps);
+  };
 
   return (
     <Formik
       onSubmit={handleFormSubmit}
       initialValues={isLogin ? initialValueLogin : initialValueRegister}
       validationSchema={isLogin ? loginSchema : registerSchema}
+      validateOnChange={false}
     >
       {({
         values,
@@ -78,7 +128,6 @@ const Form = () => {
         handleBlur,
         handleChange,
         handleSubmit,
-        setFieldValue,
         resetForm,
       }) => (
         <form onSubmit={handleSubmit}>
@@ -115,12 +164,11 @@ const Form = () => {
                   helperText={touched.lastName && errors.lastName}
                   sx={{ gridColumn: "span 2" }}
                 />
-                <FormControl>
+                <FormControl sx={{ gridColumn: "span 4" }}>
                   <FormLabel id="gender">Jenis Kelamin</FormLabel>
                   <RadioGroup
                     row
                     aria-labelledby="gender"
-                    defaultValue="female"
                     name="gender"
                     onBlur={handleBlur}
                     onChange={handleChange}
@@ -139,29 +187,63 @@ const Form = () => {
                     />
                   </RadioGroup>
                 </FormControl>
-                <TextField
-                  label="Email"
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                  value={values.email}
-                  name="email"
-                  error={Boolean(touched.email) && Boolean(errors.email)}
-                  helperText={touched.email && errors.email}
-                  sx={{ gridColumn: "span 4" }}
-                />
-                <TextField
-                  label="Password"
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                  value={values.password}
-                  name="password"
-                  error={Boolean(touched.password) && Boolean(errors.password)}
-                  helperText={touched.password && errors.password}
-                  sx={{ gridColumn: "span 4" }}
-                />
               </>
             )}
-            form submit disini
+            <TextField
+              label="Email"
+              onBlur={handleBlur}
+              onChange={handleChange}
+              value={values.email}
+              name="email"
+              error={Boolean(touched.email) && Boolean(errors.email)}
+              helperText={touched.email && errors.email}
+              sx={{ gridColumn: "span 4" }}
+            />
+            <TextField
+              label="Password"
+              type="password"
+              onBlur={handleBlur}
+              onChange={handleChange}
+              value={values.password}
+              name="password"
+              error={Boolean(touched.password) && Boolean(errors.password)}
+              helperText={touched.password && errors.password}
+              sx={{ gridColumn: "span 4" }}
+            />
+          </Box>
+          {/**SUBMIT BUTTON */}
+          <Box>
+            <Button
+              fullWidth
+              type="submit"
+              sx={{
+                m: "2rem 0",
+                p: "1rem",
+                backgroundColor: palette.primary.main,
+                color: "white",
+                "&:hover": { color: palette.primary.main },
+              }}
+            >
+              {isLogin ? "Login" : "Daftar"}
+            </Button>
+            <Typography
+              onClick={() => {
+                setPageType(isLogin ? "register" : "login");
+                resetForm();
+              }}
+              sx={{
+                textDecoration: "underline",
+                color: palette.primary.main,
+                "&:hover": {
+                  cursor: "pointer",
+                  color: palette.primary.light,
+                },
+              }}
+            >
+              {isLogin
+                ? "Belum punya akun? daftar disini"
+                : "Sudah punya akun, login disini"}
+            </Typography>
           </Box>
         </form>
       )}

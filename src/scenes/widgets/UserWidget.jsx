@@ -21,7 +21,6 @@ const UserWidget = ({ userId }) => {
   const medium = palette.neutral.medium;
   const main = palette.neutral.main;
 
-  console.log(userId);
   const getUser = async () => {
     /**FETCH DATA DARI API */
     const response = await fetch(

@@ -11,7 +11,6 @@ const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
   const navigate = useNavigate();
   const { _id, friends } = useSelector((state) => state.user);
   const token = useSelector((state) => state.token);
-  console.log(friends);
 
   const { palette } = useTheme();
   const primaryLight = palette.primary.light;
@@ -19,8 +18,8 @@ const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
   const main = palette.neutral.main;
   const medium = palette.neutral.medium;
 
-  const isFriend = friends.find((friend) => friend._id === friendId);
-
+  const isFriend = friends.includes(friendId);
+  console.log(isFriend);
   const patchFriend = async () => {
     const response = await fetch(
       `http://localhost:3001/api/v1/users/${_id}/${friendId}`,
@@ -35,6 +34,7 @@ const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
     const data = await response.json();
     dispatch(setFriends({ friends: data }));
   };
+
   return (
     <FlexBetween>
       <FlexBetween gap="1rem">
